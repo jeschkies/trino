@@ -45,9 +45,10 @@ public class TestQueryResult
                 Thread.currentThread().getContextClassLoader().getResourceAsStream("matrix.json");
         QueryResult result = QueryResult.fromJSON(input);
 
-        assertThat(result.getData().getResultType()).isEqualTo("streams");
+        assertThat(result.getData().getResultType()).isEqualTo("matrix");
         assertThat(result.getData().getResult()).isInstanceOf(Matrix.class);
         var metrics = ((Matrix) result.getData().getResult()).getMetrics();
-        assertThat(metrics).hasSize(42);
+        assertThat(metrics).hasSize(4);
+        assertThat(metrics.getFirst().values()).hasSize(22);
     }
 }

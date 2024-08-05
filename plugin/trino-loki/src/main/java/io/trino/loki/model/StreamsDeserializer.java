@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,10 +20,7 @@ class StreamsDeserializer
         List<Streams.Stream> streams = new ArrayList<>();
         if (jp.currentToken() == JsonToken.START_ARRAY) {
             jp.nextToken();
-            while (jp.currentToken() != JsonToken.END_ARRAY) {
-                streams.add(jp.readValueAs(Streams.Stream.class));
-                jp.nextToken();
-            }
+            streams = Lists.newArrayList(jp.readValuesAs(Streams.Stream.class));
         }
 
         Streams s = new Streams();

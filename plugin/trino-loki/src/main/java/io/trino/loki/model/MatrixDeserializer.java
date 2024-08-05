@@ -4,10 +4,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MatrixDeserializer
         extends JsonDeserializer<Matrix>
@@ -19,10 +18,7 @@ public class MatrixDeserializer
         Matrix matrix = new Matrix();
         if (jp.currentToken() == JsonToken.START_ARRAY) {
             jp.nextToken();
-            while (jp.currentToken() != JsonToken.END_ARRAY) {
-                jp.readValuesAs(Matrix.Metric.class);
-                jp.nextToken();
-            }
+            matrix.setMetrics(Lists.newArrayList(jp.readValuesAs(Matrix.Metric.class)));
         }
 
         return matrix;
