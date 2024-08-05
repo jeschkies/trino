@@ -106,8 +106,9 @@ public class LokiMetadata implements ConnectorMetadata {
 
         LokiTableHandle tableHandle = queryHandle.getTableHandle();
         List<ColumnHandle> columnHandles = ImmutableList.of(
-                new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 0),
-                new LokiColumnHandle("value", VarcharType.VARCHAR, 1)
+                new LokiColumnHandle("labels", VarcharType.VARCHAR, 0),
+                new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 1),
+                new LokiColumnHandle("value", VarcharType.VARCHAR, 2)
         );
         return Optional.of(new TableFunctionApplicationResult<>(tableHandle, columnHandles));
     }

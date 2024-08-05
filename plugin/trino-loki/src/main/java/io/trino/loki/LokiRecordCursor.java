@@ -16,19 +16,30 @@ package io.trino.loki;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.trino.spi.TrinoException;
+import io.trino.spi.block.ArrayBlockBuilder;
+import io.trino.spi.block.BlockBuilder;
+import io.trino.spi.block.MapBlockBuilder;
+import io.trino.spi.block.SqlMap;
 import io.trino.spi.connector.RecordCursor;
-import io.trino.spi.type.Type;
+import io.trino.spi.type.*;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
+import static io.trino.spi.block.MapValueBuilder.buildMapValue;
+import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.IntegerType.INTEGER;
+import static io.trino.spi.type.SmallintType.SMALLINT;
+import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static java.util.Objects.requireNonNull;
 
@@ -37,10 +48,21 @@ public class LokiRecordCursor implements RecordCursor {
     private final List<LokiColumnHandle> columnHandles;
     private final int[] fieldToColumnIndex;
 
-    private final Iterator<QueryResult.LogEntry> entryItr;
+    private final Iterator<XXEntry> entryItr;
 
-    // TODO: include labels
-    private QueryResult.LogEntry entry;
+    static class XXEntry {
+        public QueryResult.LogEntry entry;
+        public Map<String, String> labels;
+
+        public XXEntry(QueryResult.LogEntry entry, Map<String,String> labels) {
+            super();
+            this.entry = entry;
+            this.labels = labels;
+        }
+
+    }
+
+    private XXEntry entry;
 
     public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result) {
         this.columnHandles = columnHandles;
@@ -53,8 +75,8 @@ public class LokiRecordCursor implements RecordCursor {
 
         this.entryItr = result.getData().getStreams()
                 .stream()
-                .flatMap(stream -> stream.getValues().stream())
-                .iterator();
+                .flatMap(stream -> stream.getValues().stream()
+                .map(value -> new XXEntry(value, stream.getLabels()))).iterator();
     }
 
     @Override
@@ -88,9 +110,9 @@ public class LokiRecordCursor implements RecordCursor {
 
         int columnIndex = fieldToColumnIndex[field];
         return switch (columnIndex) {
-            // TODO: case 0 -> getSqlMapFromMap(columnHandles.get(columnIndex).columnType(), fields.labels());
-            case 0 -> entry.getTs();
-            case 1 -> entry.getLine();
+            case 0 -> entry.labels.toString().substring(0,60);
+            case 1 -> entry.entry.getTs();
+            case 2 -> entry.entry.getLine();
             default -> null;
         };
     }
