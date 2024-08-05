@@ -14,12 +14,10 @@
 package io.trino.loki;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.type.Type;
 
-import java.net.URI;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -43,14 +41,17 @@ public class LokiRecordSet implements RecordSet {
         }
         this.columnTypes = types.build();
 
-        // TODO: get query and start from table
-        final String query = "{fill=\"me\"}";
-        final Long start = 1722848543L - (15 * 60 * 1000); // Start and end should be part of split
-        final Long end = 1722848543L;
+        Long end = now();
+        Long start = end - ONE_HOUR;
+        //if split.end().getEpochMillis() != 0 {}
+        //if split.start().getEpochMillis() != 0 {}
+
         // Actually execute the query
         // TODO: lazily parse
-        this.result = lokiClient.doQuery(query, start, end); // TODO: pass split
+        this.result = lokiClient.doQuery(split.query(), start, end);
     }
+
+    static long ONE_HOUR = Duration.ofHours(1).toNanos();
 
     @Override
     public List<Type> getColumnTypes()
@@ -62,5 +63,11 @@ public class LokiRecordSet implements RecordSet {
     public RecordCursor cursor()
     {
         return new LokiRecordCursor(columnHandles, result);
+    }
+
+    private Long now() {
+        // This precision is fine for us since we control the offset.
+        var now = Instant.now();
+        return now.getEpochSecond() * 1000000000L; // as nano seconds
     }
 }

@@ -16,23 +16,26 @@ package io.trino.loki;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.connector.ConnectorSplit;
+import io.trino.spi.type.LongTimestampWithTimeZone;
 
 import static java.util.Objects.requireNonNull;
 
 // TODO: support time based splits
-public class LokiSplit implements ConnectorSplit {
-    private final String uri;
+public record LokiSplit(
+        @JsonProperty("uri")
+        String uri,
+        @JsonProperty("query")
+        String query,
+        @JsonProperty("start")
+        LongTimestampWithTimeZone start,
+        @JsonProperty("end")
+        LongTimestampWithTimeZone end
+) implements ConnectorSplit {
 
     @JsonCreator
-    public LokiSplit(@JsonProperty("uri") String uri)
+    public LokiSplit
     {
-        this.uri = requireNonNull(uri, "uri is null");
-
-    }
-    
-    @JsonProperty
-    public String getUri()
-    {
-        return uri;
+       requireNonNull(uri, "uri is null");
+       requireNonNull(query, "query is null");
     }
 }
