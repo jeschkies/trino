@@ -67,12 +67,13 @@ public class LokiTableFunction
     }
 
     @Override
-    public TableFunctionAnalysis analyze(ConnectorSession session, ConnectorTransactionHandle transaction, Map<String, Argument> arguments, ConnectorAccessControl accessControl) {
+    public TableFunctionAnalysis analyze(ConnectorSession session, ConnectorTransactionHandle transaction, Map<String, Argument> arguments, ConnectorAccessControl accessControl)
+    {
         io.airlift.slice.Slice selector = (io.airlift.slice.Slice) ((ScalarArgument) arguments.get("QUERY")).getValue();
         String strSelector = new String(selector.byteArray());
 
-       var start = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("START")).getValue();
-       var end = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("END")).getValue();
+        var start = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("START")).getValue();
+        var end = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("END")).getValue();
 
         if (Strings.isNullOrEmpty(strSelector)) {
             throw new TrinoException(INVALID_FUNCTION_ARGUMENT, strSelector);

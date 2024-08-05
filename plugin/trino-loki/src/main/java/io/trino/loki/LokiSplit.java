@@ -28,11 +28,13 @@ public record LokiSplit(
         Instant start,
         @JsonProperty("end")
         Instant end
-) implements ConnectorSplit {
+)
+        implements ConnectorSplit
+{
 
     @JsonCreator
     public LokiSplit
     {
-       requireNonNull(query, "query is null");
+        requireNonNull(query, "query is null");
     }
 }
