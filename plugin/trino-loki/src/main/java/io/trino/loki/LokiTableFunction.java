@@ -8,6 +8,8 @@ import io.trino.spi.connector.ConnectorAccessControl;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.function.table.*;
+import io.trino.spi.type.LongTimestampWithTimeZone;
+import io.trino.spi.type.TimeZoneKey;
 import io.trino.spi.type.VarcharType;
 
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import static io.trino.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
 import static io.trino.spi.function.table.ReturnTypeSpecification.GenericTable.GENERIC_TABLE;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.IntegerType.INTEGER;
+import static io.trino.spi.type.TimestampWithTimeZoneType.TIMESTAMP_TZ_NANOS;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -32,11 +35,17 @@ public class LokiTableFunction
                 "loki",
                 List.of(
                         ScalarArgumentSpecification.builder()
-                                .name("RANGE")
-                                .type(INTEGER)
+                                .name("START")
+                                .type(TIMESTAMP_TZ_NANOS)
+                                .defaultValue(LongTimestampWithTimeZone.fromEpochSecondsAndFraction(0, 0, TimeZoneKey.UTC_KEY))
                                 .build(),
                         ScalarArgumentSpecification.builder()
-                                .name("SELECTOR")
+                                .name("END")
+                                .type(TIMESTAMP_TZ_NANOS)
+                                .defaultValue(LongTimestampWithTimeZone.fromEpochSecondsAndFraction(0, 0, TimeZoneKey.UTC_KEY))
+                                .build(),
+                        ScalarArgumentSpecification.builder()
+                                .name("QUERY")
                                 .type(VarcharType.VARCHAR)
                                 .build()),
                 GENERIC_TABLE);
@@ -44,15 +53,11 @@ public class LokiTableFunction
 
     @Override
     public TableFunctionAnalysis analyze(ConnectorSession session, ConnectorTransactionHandle transaction, Map<String, Argument> arguments, ConnectorAccessControl accessControl) {
-        long range = (long) ((ScalarArgument) arguments.get("RANGE")).getValue();
-        io.airlift.slice.Slice selector = (io.airlift.slice.Slice) ((ScalarArgument) arguments.get("SELECTOR")).getValue();
+        io.airlift.slice.Slice selector = (io.airlift.slice.Slice) ((ScalarArgument) arguments.get("QUERY")).getValue();
         String strSelector = new String(selector.byteArray());
 
-
-        // custom validation of arguments
-        if (range > 0) {
-            throw new TrinoException(INVALID_FUNCTION_ARGUMENT, "column_count must be in range [1, 3]");
-        }
+       var start = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("START")).getValue();
+       var end = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("END")).getValue();
 
         if (Strings.isNullOrEmpty(strSelector)) {
             throw new TrinoException(INVALID_FUNCTION_ARGUMENT, strSelector);
@@ -66,7 +71,7 @@ public class LokiTableFunction
 
         return TableFunctionAnalysis.builder()
                 .returnedType(returnedType)
-                .handle(new QueryHandle(new LokiTableHandle(strSelector)))
+                .handle(new QueryHandle(new LokiTableHandle(strSelector, start, end)))
                 .build();
     }
 

@@ -28,7 +28,10 @@ public class LokiSplitManager implements ConnectorSplitManager {
             DynamicFilter dynamicFilter,
             Constraint constraint) {
 
+        var table = (LokiTableHandle) connectorTableHandle;
+
         // TODO: support multiple splits by splitting on time.
+        // TODO: pass query from table and start and end.
         List<ConnectorSplit> splits = ImmutableList.of(new LokiSplit("fixme"));
         return new FixedSplitSource(splits);
     }
