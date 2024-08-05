@@ -22,8 +22,6 @@ import java.time.Instant;
 import static java.util.Objects.requireNonNull;
 
 public record LokiSplit(
-        @JsonProperty("uri")
-        String uri,
         @JsonProperty("query")
         String query,
         @JsonProperty("start")
@@ -35,7 +33,6 @@ public record LokiSplit(
     @JsonCreator
     public LokiSplit
     {
-       requireNonNull(uri, "uri is null");
        requireNonNull(query, "query is null");
     }
 }

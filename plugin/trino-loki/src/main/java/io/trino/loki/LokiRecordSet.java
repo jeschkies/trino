@@ -46,13 +46,14 @@ public class LokiRecordSet implements RecordSet {
 
         Long end = now();
         Long start = end - ONE_HOUR;
-        //if split.end().getEpochMillis() != 0 {}
-        //if split.start().getEpochMillis() != 0 {}
-
-        String query = "{source=\"stderr\"}";
-        if(!Objects.equals(split.query(), "")) {
-            query = split.query();
+        if (split.end().getEpochSecond() != 0) {
+           end = nanosFromInstant(split.end());
         }
+        if (split.start().getEpochSecond() != 0) {
+            start = nanosFromInstant(split.start());
+        }
+
+        final String query = split.query();
         // Actually execute the query
         // TODO: lazily parse
         this.result = lokiClient.doQuery(query, start, end);
@@ -73,8 +74,12 @@ public class LokiRecordSet implements RecordSet {
     }
 
     private Long now() {
-        // This precision is fine for us since we control the offset.
+        // This precision is fine for us.
         var now = Instant.now();
-        return now.getEpochSecond() * 1000000000L; // as nano seconds
+        return nanosFromInstant(now);
+    }
+
+    private Long nanosFromInstant(Instant i)  {
+        return i.getEpochSecond() * 1000000000L + i.getNano(); // as nanoseconds
     }
 }

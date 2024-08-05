@@ -34,7 +34,7 @@ public class LokiSplitManager implements ConnectorSplitManager {
         var table = (LokiTableHandle) connectorTableHandle;
 
         // TODO: support multiple splits by splitting on time.
-        List<ConnectorSplit> splits = ImmutableList.of(new LokiSplit("fixme", table.query(), table.start(), table.end()));
+        List<ConnectorSplit> splits = ImmutableList.of(new LokiSplit(table.query(), table.start(), table.end()));
 
         log.debug("created %d splits", splits.size());
         return new FixedSplitSource(splits);
