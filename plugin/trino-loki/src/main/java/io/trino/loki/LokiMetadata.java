@@ -31,7 +31,9 @@ import static io.trino.spi.connector.RelationColumnsMetadata.forTable;
 import static io.trino.spi.type.TimestampWithTimeZoneType.createTimestampWithTimeZoneType;
 import static java.util.Objects.requireNonNull;
 
-public class LokiMetadata implements ConnectorMetadata {
+public class LokiMetadata
+        implements ConnectorMetadata
+{
     private final LokiClient lokiClient;
 
     // TODO: this might not be the right spot
@@ -56,7 +58,6 @@ public class LokiMetadata implements ConnectorMetadata {
         return ImmutableList.copyOf(ImmutableSet.of("default"));
     }
 
-
     @Override
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> optionalSchemaName)
     {
@@ -78,26 +79,6 @@ public class LokiMetadata implements ConnectorMetadata {
     }
 
     @Override
-    public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
-    {
-        Map<SchemaTableName, RelationColumnsMetadata> relationColumns = new HashMap<>();
-
-        SchemaTablePrefix prefix = schemaName.map(SchemaTablePrefix::new)
-                .orElseGet(SchemaTablePrefix::new);
-        for (SchemaTableName tableName : listTables(session, prefix)) {
-            ConnectorTableMetadata tableMetadata = getTableMetadata(tableName);
-            // table can disappear during listing operation
-            if (tableMetadata != null) {
-                relationColumns.put(tableName, forTable(tableName, tableMetadata.getColumns()));
-            }
-        }
-
-        return relationFilter.apply(relationColumns.keySet()).stream()
-                .map(relationColumns::get)
-                .iterator();
-    }
-
-    @Override
     public Optional<TableFunctionApplicationResult<ConnectorTableHandle>> applyTableFunction(ConnectorSession session, ConnectorTableFunctionHandle handle)
     {
         if (!(handle instanceof LokiTableFunction.QueryHandle queryHandle)) {
@@ -112,32 +93,23 @@ public class LokiMetadata implements ConnectorMetadata {
         return Optional.of(new TableFunctionApplicationResult<>(tableHandle, columnHandles));
     }
 
-    // TODO this always returns null
-    private ConnectorTableMetadata getTableMetadata(SchemaTableName tableName)
-    {
-        if (!listSchemaNames().contains(tableName.getSchemaName())) {
-            return null;
-        }
-
-        return null;
-
-    }
-
     @Override
-    public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle table){
-        // TODO: base value column type on query
+    public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle table)
+    {
+        // TODO: base value column type on query. Maybe by querying Loki.
 
         var columns = ImmutableList.of(
-                        //new ColumnMetadata("labels", varcharMapType),
-                        new ColumnMetadata("timestamp", TIMESTAMP_COLUMN_TYPE),
-                        new ColumnMetadata("value", VarcharType.VARCHAR)
+                //new ColumnMetadata("labels", varcharMapType),
+                new ColumnMetadata("timestamp", TIMESTAMP_COLUMN_TYPE),
+                new ColumnMetadata("value", VarcharType.VARCHAR)
         );
 
         return new ConnectorTableMetadata(new SchemaTableName("default", "test"), columns);
     }
 
     @Override
-    public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle columnHandle) {
+    public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
+    {
         return new ColumnMetadata("a_xxx", VarcharType.VARCHAR);
     }
 }
