@@ -18,7 +18,10 @@ import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.type.Type;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,9 +49,13 @@ public class LokiRecordSet implements RecordSet {
         //if split.end().getEpochMillis() != 0 {}
         //if split.start().getEpochMillis() != 0 {}
 
+        String query = "{source=\"stderr\"}";
+        if(!Objects.equals(split.query(), "")) {
+            query = split.query();
+        }
         // Actually execute the query
         // TODO: lazily parse
-        this.result = lokiClient.doQuery(split.query(), start, end);
+        this.result = lokiClient.doQuery(query, start, end);
     }
 
     static long ONE_HOUR = Duration.ofHours(1).toNanos();

@@ -3,6 +3,7 @@ package io.trino.loki;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorAccessControl;
 import io.trino.spi.connector.ConnectorSession;
@@ -64,8 +65,10 @@ public class LokiTableFunction
         }
 
         // determine the returned row type
-        List<Descriptor.Field> fields = new ArrayList<>();
-        fields.add(new Descriptor.Field(strSelector, Optional.of(VarcharType.VARCHAR)));
+        List<Descriptor.Field> fields = ImmutableList.of(
+                new Descriptor.Field("timestamp", Optional.of(LokiMetadata.TIMESTAMP_COLUMN_TYPE)),
+                new Descriptor.Field("value", Optional.of(VarcharType.VARCHAR))
+        );
 
         Descriptor returnedType = new Descriptor(fields);
 

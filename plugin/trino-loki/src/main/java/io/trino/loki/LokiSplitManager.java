@@ -14,11 +14,14 @@
 package io.trino.loki;
 
 import com.google.common.collect.ImmutableList;
+import io.airlift.log.Logger;
 import io.trino.spi.connector.*;
 
 import java.util.List;
 
 public class LokiSplitManager implements ConnectorSplitManager {
+
+    private static final Logger log = Logger.get(LokiSplitManager.class);
 
     @Override
     public ConnectorSplitSource getSplits(
@@ -32,6 +35,8 @@ public class LokiSplitManager implements ConnectorSplitManager {
 
         // TODO: support multiple splits by splitting on time.
         List<ConnectorSplit> splits = ImmutableList.of(new LokiSplit("fixme", table.query(), table.start(), table.end()));
+
+        log.debug("created %d splits", splits.size());
         return new FixedSplitSource(splits);
     }
 }
