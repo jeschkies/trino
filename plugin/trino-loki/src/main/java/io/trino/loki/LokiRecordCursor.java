@@ -32,7 +32,9 @@ import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static java.util.Objects.requireNonNull;
 
-public class LokiRecordCursor implements RecordCursor {
+public class LokiRecordCursor
+        implements RecordCursor
+{
 
     private final List<LokiColumnHandle> columnHandles;
     private final int[] fieldToColumnIndex;
@@ -42,7 +44,8 @@ public class LokiRecordCursor implements RecordCursor {
     // TODO: include labels
     private QueryResult.LogEntry entry;
 
-    public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result) {
+    public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result)
+    {
         this.columnHandles = columnHandles;
 
         fieldToColumnIndex = new int[columnHandles.size()];
@@ -51,30 +54,36 @@ public class LokiRecordCursor implements RecordCursor {
             fieldToColumnIndex[i] = columnHandle.ordinalPosition();
         }
 
-        this.entryItr = result.getData().getStreams()
+        var streamsResult = (QueryResult.Streams) result.getData().getResult();
+
+        this.entryItr = streamsResult.getStreams()
                 .stream()
                 .flatMap(stream -> stream.getValues().stream())
                 .iterator();
     }
 
     @Override
-    public long getCompletedBytes() {
+    public long getCompletedBytes()
+    {
         return 0;
     }
 
     @Override
-    public long getReadTimeNanos() {
+    public long getReadTimeNanos()
+    {
         return 0;
     }
 
     @Override
-    public Type getType(int field) {
+    public Type getType(int field)
+    {
         checkArgument(field < columnHandles.size(), "Invalid field index");
         return columnHandles.get(field).columnType();
     }
 
     @Override
-    public boolean advanceNextPosition() {
+    public boolean advanceNextPosition()
+    {
         if (!entryItr.hasNext()) {
             return false;
         }
@@ -96,12 +105,14 @@ public class LokiRecordCursor implements RecordCursor {
     }
 
     @Override
-    public boolean getBoolean(int field) {
+    public boolean getBoolean(int field)
+    {
         return false;
     }
 
     @Override
-    public long getLong(int field) {
+    public long getLong(int field)
+    {
         Type type = getType(field);
         if (type.equals(LokiMetadata.TIMESTAMP_COLUMN_TYPE)) {
             Long nanos = (Long) requireNonNull(getEntryValue(field));
@@ -113,30 +124,35 @@ public class LokiRecordCursor implements RecordCursor {
     }
 
     @Override
-    public double getDouble(int field) {
+    public double getDouble(int field)
+    {
         checkFieldType(field, DOUBLE);
         return (double) requireNonNull(getEntryValue(field));
     }
 
     @Override
-    public Slice getSlice(int field) {
+    public Slice getSlice(int field)
+    {
         checkFieldType(field, createUnboundedVarcharType());
         return Slices.utf8Slice((String) requireNonNull(getEntryValue(field)));
     }
 
     @Override
-    public Object getObject(int field) {
+    public Object getObject(int field)
+    {
         return getEntryValue(field);
     }
 
     @Override
-    public boolean isNull(int field) {
+    public boolean isNull(int field)
+    {
         checkArgument(field < columnHandles.size(), "Invalid field index");
         return getEntryValue(field) == null;
     }
 
     @Override
-    public void close() {
+    public void close()
+    {
 
     }
 

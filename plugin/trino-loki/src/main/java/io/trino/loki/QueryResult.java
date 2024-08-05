@@ -15,128 +15,209 @@ package io.trino.loki;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class QueryResult {
+public class QueryResult
+{
 
-  static ObjectMapper mapper = new ObjectMapper();
+    static ObjectMapper mapper = new ObjectMapper();
 
-  public static QueryResult fromJSON(InputStream input) throws IOException {
-    return mapper.readValue(input, QueryResult.class);
-  }
-
-  public String getStatus() {
-    return status;
-  }
-
-  public Data getData() {
-    return data;
-  }
-
-  public void setStatus(String status) {
-    this.status = status;
-  }
-
-  public void setData(Data data) {
-    this.data = data;
-  }
-
-  private String status;
-  private Data data;
-
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  static class Data {
-
-    public String getResultType() {
-      return resultType;
+    public static QueryResult fromJSON(InputStream input)
+            throws IOException
+    {
+        return mapper.readValue(input, QueryResult.class);
     }
 
-    public void setResultType(String resultType) {
-      this.resultType = resultType;
+    public String getStatus()
+    {
+        return status;
     }
 
-    private String resultType;
-
-    // TODO: support matrix result type as well.
-    // See https://grafana.com/docs/loki/latest/reference/loki-http-api/#step-versus-interval
-    public List<Stream> getStreams() {
-      return streams;
+    public Data getData()
+    {
+        return data;
     }
 
-    public void setStreams(List<Stream> streams) {
-      this.streams = streams;
+    public void setStatus(String status)
+    {
+        this.status = status;
     }
 
-    @JsonProperty("result")
-    private List<Stream> streams;
-  }
-
-  static class Stream {
-    public Map<String, String> getLabels() {
-      return labels;
+    public void setData(Data data)
+    {
+        this.data = data;
     }
 
-    public void setLabels(Map<String, String> labels) {
-      this.labels = labels;
+    private String status;
+    private Data data;
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    static class Data
+    {
+
+        public String getResultType()
+        {
+            return resultType;
+        }
+
+        public void setResultType(String resultType)
+        {
+            this.resultType = resultType;
+        }
+
+        private String resultType;
+
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "resultType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
+        @JsonSubTypes(value = {
+                @JsonSubTypes.Type(value = Streams.class, name = "streams"),
+                @JsonSubTypes.Type(value = Matrix.class, name = "matrix")
+        })
+        private Result result;
+
+        public Result getResult()
+        {
+            return result;
+        }
+
+        public void setResult(Result result)
+        {
+            this.result = result;
+        }
     }
 
-    public List<LogEntry> getValues() {
-      return values;
+    static abstract class Result {}
+
+    @JsonDeserialize(using = StreamsDeserializer.class)
+    static final class Streams
+            extends Result
+    {
+
+        public List<Stream> getStreams()
+        {
+            return streams;
+        }
+
+        public void setStreams(List<Stream> streams)
+        {
+            this.streams = streams;
+        }
+
+        private List<Stream> streams;
     }
 
-    public void setValues(List<LogEntry> values) {
-      this.values = values;
+    static class StreamsDeserializer
+            extends JsonDeserializer<Streams>
+    {
+        @Override
+        public Streams deserialize(JsonParser jp, DeserializationContext ctxt)
+                throws IOException
+        {
+            List<Stream> streams = new ArrayList<>();
+            if (jp.currentToken() == JsonToken.START_ARRAY) {
+                jp.nextToken();
+                while (jp.currentToken() != JsonToken.END_ARRAY) {
+                    streams.add(jp.readValueAs(Stream.class));
+                    jp.nextToken();
+                }
+            }
+
+            Streams s = new Streams();
+            s.setStreams(streams);
+            return s;
+        }
     }
 
-    @JsonProperty("stream")
-    private Map<String, String> labels;
+    static final class Matrix
+            extends Result
+    {}
 
-    private List<LogEntry> values;
-  }
+    static class Stream
+    {
+        public Map<String, String> getLabels()
+        {
+            return labels;
+        }
 
-  @JsonDeserialize(using = LogEntryDeserializer.class)
-  static class LogEntry {
-    public Long getTs() {
-      return ts;
+        public void setLabels(Map<String, String> labels)
+        {
+            this.labels = labels;
+        }
+
+        public List<LogEntry> getValues()
+        {
+            return values;
+        }
+
+        public void setValues(List<LogEntry> values)
+        {
+            this.values = values;
+        }
+
+        @JsonProperty("stream")
+        private Map<String, String> labels;
+
+        private List<LogEntry> values;
     }
 
-    public void setTs(Long ts) {
-      this.ts = ts;
+    @JsonDeserialize(using = LogEntryDeserializer.class)
+    static class LogEntry
+    {
+        public Long getTs()
+        {
+            return ts;
+        }
+
+        public void setTs(Long ts)
+        {
+            this.ts = ts;
+        }
+
+        public String getLine()
+        {
+            return line;
+        }
+
+        public void setLine(String line)
+        {
+            this.line = line;
+        }
+
+        private Long ts;
+        private String line;
     }
 
-    public String getLine() {
-      return line;
-    }
+    static class LogEntryDeserializer
+            extends StdDeserializer<LogEntry>
+    {
+        LogEntryDeserializer()
+        {
+            super(LogEntry.class);
+        }
 
-    public void setLine(String line) {
-      this.line = line;
+        @Override
+        public LogEntry deserialize(JsonParser p, DeserializationContext ctxt)
+                throws IOException
+        {
+            final JsonNode node = p.getCodec().readTree(p);
+            LogEntry entry = new LogEntry();
+            entry.setTs(node.get(0).asLong());
+            entry.setLine(node.get(1).asText());
+            return entry;
+        }
     }
-
-    private Long ts;
-    private String line;
-  }
-
-  static class LogEntryDeserializer extends StdDeserializer<LogEntry> {
-    LogEntryDeserializer() {
-      super(LogEntry.class);
-    }
-
-    @Override
-    public LogEntry deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-      final JsonNode node = p.getCodec().readTree(p);
-      LogEntry entry = new LogEntry();
-      entry.setTs(node.get(0).asLong());
-      entry.setLine(node.get(1).asText());
-      return entry;
-    }
-  }
 }

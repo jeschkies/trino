@@ -17,16 +17,34 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
+
 import org.junit.jupiter.api.Test;
 
-public class TestQueryResult {
-  @Test
-  void testDeserialize() throws IOException {
-    final InputStream input =
-        Thread.currentThread().getContextClassLoader().getResourceAsStream("result.json");
-    QueryResult result = QueryResult.fromJSON(input);
+public class TestQueryResult
+{
+    @Test
+    void testDeserializeStreams()
+            throws IOException
+    {
+        final InputStream input =
+                Thread.currentThread().getContextClassLoader().getResourceAsStream("result.json");
+        QueryResult result = QueryResult.fromJSON(input);
 
-    var values = result.getData().getStreams().getFirst().getValues();
-    assertThat(values).hasSize(100);
-  }
+        assertThat(result.getData().getResultType()).isEqualTo("streams");
+        assertThat(result.getData().getResult()).isInstanceOf(QueryResult.Streams.class);
+        var streams = ((QueryResult.Streams) result.getData().getResult()).getStreams();
+        assertThat(streams).hasSize(3);
+        assertThat(streams.getFirst().getValues()).hasSize(89);
+    }
+
+    @Test
+    void testDeserializeMatrix()
+            throws IOException
+    {
+        final InputStream input =
+                Thread.currentThread().getContextClassLoader().getResourceAsStream("matrix.json");
+        QueryResult result = QueryResult.fromJSON(input);
+
+        assertThat(result.getData().getResultType()).isEqualTo("streams");
+    }
 }
