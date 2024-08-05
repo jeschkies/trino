@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.loki;
+package io.trino.loki.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,14 +27,14 @@ public class TestQueryResult
             throws IOException
     {
         final InputStream input =
-                Thread.currentThread().getContextClassLoader().getResourceAsStream("result.json");
+                Thread.currentThread().getContextClassLoader().getResourceAsStream("streams.json");
         QueryResult result = QueryResult.fromJSON(input);
 
         assertThat(result.getData().getResultType()).isEqualTo("streams");
-        assertThat(result.getData().getResult()).isInstanceOf(QueryResult.Streams.class);
-        var streams = ((QueryResult.Streams) result.getData().getResult()).getStreams();
+        assertThat(result.getData().getResult()).isInstanceOf(Streams.class);
+        var streams = ((Streams) result.getData().getResult()).getStreams();
         assertThat(streams).hasSize(3);
-        assertThat(streams.getFirst().getValues()).hasSize(89);
+        assertThat(streams.getFirst().values()).hasSize(89);
     }
 
     @Test
@@ -46,5 +46,8 @@ public class TestQueryResult
         QueryResult result = QueryResult.fromJSON(input);
 
         assertThat(result.getData().getResultType()).isEqualTo("streams");
+        assertThat(result.getData().getResult()).isInstanceOf(Matrix.class);
+        var metrics = ((Matrix) result.getData().getResult()).getMetrics();
+        assertThat(metrics).hasSize(42);
     }
 }

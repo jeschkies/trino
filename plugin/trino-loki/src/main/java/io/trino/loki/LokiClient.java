@@ -16,6 +16,7 @@ package io.trino.loki;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpUriBuilder;
+import io.trino.loki.model.QueryResult;
 import io.trino.spi.TrinoException;
 import okhttp3.*;
 
@@ -30,13 +31,15 @@ import static io.trino.loki.LokiErrorCode.LOKI_UNKNOWN_ERROR;
 import static io.trino.spi.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.util.Objects.requireNonNull;
 
-public class LokiClient {
+public class LokiClient
+{
 
     private final OkHttpClient httpClient;
     private final URI lokiEndpoint;
 
     @Inject
-    public LokiClient(LokiConnectorConfig config) {
+    public LokiClient(LokiConnectorConfig config)
+    {
         this.lokiEndpoint = config.getLokiURI();
 
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().readTimeout(Duration.ofMillis(config.getReadTimeout().toMillis()));
@@ -66,7 +69,8 @@ public class LokiClient {
     }
 
     // TODO: execute query
-    public QueryResult doQuery(String lokiQuery, Long start, Long end) {
+    public QueryResult doQuery(String lokiQuery, Long start, Long end)
+    {
         final URI uri =
                 HttpUriBuilder.uriBuilderFrom(lokiEndpoint)
                         .appendPath("/loki/api/v1/query_range")
@@ -95,7 +99,8 @@ public class LokiClient {
         return ImmutableSet.copyOf(tables);
     }
 
-    public Response requestUri(URI uri) throws IOException
+    public Response requestUri(URI uri)
+            throws IOException
     {
         Request.Builder requestBuilder = new Request.Builder().url(uri.toString());
         return httpClient.newCall(requestBuilder.build()).execute();

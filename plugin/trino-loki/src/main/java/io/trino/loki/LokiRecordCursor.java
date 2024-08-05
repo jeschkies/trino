@@ -15,6 +15,9 @@ package io.trino.loki;
 
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
+import io.trino.loki.model.LogEntry;
+import io.trino.loki.model.QueryResult;
+import io.trino.loki.model.Streams;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.type.Type;
@@ -39,10 +42,10 @@ public class LokiRecordCursor
     private final List<LokiColumnHandle> columnHandles;
     private final int[] fieldToColumnIndex;
 
-    private final Iterator<QueryResult.LogEntry> entryItr;
+    private final Iterator<LogEntry> entryItr;
 
     // TODO: include labels
-    private QueryResult.LogEntry entry;
+    private LogEntry entry;
 
     public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result)
     {
@@ -54,11 +57,11 @@ public class LokiRecordCursor
             fieldToColumnIndex[i] = columnHandle.ordinalPosition();
         }
 
-        var streamsResult = (QueryResult.Streams) result.getData().getResult();
+        var streamsResult = (Streams) result.getData().getResult();
 
         this.entryItr = streamsResult.getStreams()
                 .stream()
-                .flatMap(stream -> stream.getValues().stream())
+                .flatMap(stream -> stream.values().stream())
                 .iterator();
     }
 

@@ -14,6 +14,7 @@
 package io.trino.loki;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.loki.model.QueryResult;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.type.Type;
@@ -21,11 +22,12 @@ import io.trino.spi.type.Type;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-public class LokiRecordSet implements RecordSet {
+public class LokiRecordSet
+        implements RecordSet
+{
 
     private final List<LokiColumnHandle> columnHandles;
     private final List<Type> columnTypes;
@@ -47,7 +49,7 @@ public class LokiRecordSet implements RecordSet {
         Long end = now();
         Long start = end - ONE_HOUR;
         if (split.end().getEpochSecond() != 0) {
-           end = nanosFromInstant(split.end());
+            end = nanosFromInstant(split.end());
         }
         if (split.start().getEpochSecond() != 0) {
             start = nanosFromInstant(split.start());
@@ -73,13 +75,15 @@ public class LokiRecordSet implements RecordSet {
         return new LokiRecordCursor(columnHandles, result);
     }
 
-    private Long now() {
+    private Long now()
+    {
         // This precision is fine for us.
         var now = Instant.now();
         return nanosFromInstant(now);
     }
 
-    private Long nanosFromInstant(Instant i)  {
+    private Long nanosFromInstant(Instant i)
+    {
         return i.getEpochSecond() * 1000000000L + i.getNano(); // as nanoseconds
     }
 }
