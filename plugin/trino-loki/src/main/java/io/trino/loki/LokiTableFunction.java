@@ -13,6 +13,7 @@ import io.trino.spi.type.LongTimestampWithTimeZone;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.spi.type.VarcharType;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,9 +73,16 @@ public class LokiTableFunction
 
         Descriptor returnedType = new Descriptor(fields);
 
+        var tableHandle = new LokiTableHandle(
+                strSelector,
+                // TODO: account for time zone
+                Instant.ofEpochMilli(start.getEpochMillis()),
+                Instant.ofEpochMilli(end.getEpochMillis())
+        );
+
         return TableFunctionAnalysis.builder()
                 .returnedType(returnedType)
-                .handle(new QueryHandle(new LokiTableHandle(strSelector, start, end)))
+                .handle(new QueryHandle(tableHandle))
                 .build();
     }
 
