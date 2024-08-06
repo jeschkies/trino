@@ -16,8 +16,10 @@ package io.trino.loki;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import io.trino.loki.model.Data;
 import io.trino.spi.connector.*;
 import io.trino.spi.function.table.ConnectorTableFunctionHandle;
+import io.trino.spi.type.DoubleType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 
@@ -85,24 +87,29 @@ public class LokiMetadata
         }
 
         LokiTableHandle tableHandle = queryHandle.getTableHandle();
-        List<ColumnHandle> columnHandles = ImmutableList.of(
-                new LokiColumnHandle("labels", getVarcharMapType(), 0),
-                new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 1),
-                new LokiColumnHandle("value", VarcharType.VARCHAR, 2)
-        );
+
+        // Column handles are for the connector to understand the target type.
+        List<ColumnHandle> columnHandles = getColumnHandles(tableHandle.query());
+
         return Optional.of(new TableFunctionApplicationResult<>(tableHandle, columnHandles));
     }
 
     @Override
     public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle table)
     {
-        // TODO: base value column type on query. Maybe by querying Loki.
+        LokiTableHandle lokiTableHandle = (LokiTableHandle) table;
 
-        var columns = ImmutableList.of(
-                new ColumnMetadata("labels", getVarcharMapType()),
-                new ColumnMetadata("timestamp", TIMESTAMP_COLUMN_TYPE),
-                new ColumnMetadata("value", VarcharType.VARCHAR)
-        );
+        // Column Metadata tells Trino about the expected types.
+        List<ColumnMetadata> columns = new ArrayList<>();
+        columns.add(new ColumnMetadata("labels", getVarcharMapType()));
+        columns.add(new ColumnMetadata("timestamp", TIMESTAMP_COLUMN_TYPE));
+
+        if (lokiClient.getExpectedResultType(lokiTableHandle.query()) == Data.ResultType.Matrix) {
+            columns.add(new ColumnMetadata("value", DoubleType.DOUBLE));
+        }
+        else {
+            columns.add(new ColumnMetadata("value", VarcharType.VARCHAR));
+        }
 
         return new ConnectorTableMetadata(new SchemaTableName("default", "test"), columns);
     }
@@ -111,5 +118,21 @@ public class LokiMetadata
     public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         return new ColumnMetadata("a_xxx", VarcharType.VARCHAR);
+    }
+
+    public List<ColumnHandle> getColumnHandles(String query)
+    {
+        // TODO: cache result for query to avoid too many calls to Loki.
+        ImmutableList.Builder<ColumnHandle> columnsBuilder = ImmutableList.builderWithExpectedSize(3);
+        columnsBuilder.add(new LokiColumnHandle("labels", getVarcharMapType(), 0));
+        columnsBuilder.add(new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 1));
+
+        if (lokiClient.getExpectedResultType(query) == Data.ResultType.Matrix) {
+            columnsBuilder.add(new LokiColumnHandle("value", DoubleType.DOUBLE, 2));
+        }
+        else {
+            columnsBuilder.add(new LokiColumnHandle("value", VarcharType.VARCHAR, 2));
+        }
+        return columnsBuilder.build();
     }
 }

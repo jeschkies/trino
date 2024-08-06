@@ -37,6 +37,6 @@ public class LokiTableFunctionProvider
     @Override
     public ConnectorTableFunction get()
     {
-        return new ClassLoaderSafeConnectorTableFunction(new LokiTableFunction(this.lokiMetadata.getVarcharMapType()), getClass().getClassLoader());
+        return new ClassLoaderSafeConnectorTableFunction(new LokiTableFunction(this.lokiMetadata), getClass().getClassLoader());
     }
 }

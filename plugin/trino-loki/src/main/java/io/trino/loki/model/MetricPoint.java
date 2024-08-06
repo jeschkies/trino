@@ -28,16 +28,16 @@ public class MetricPoint
         this.ts = ts;
     }
 
-    public double getValue()
+    public Double getValue()
     {
         return v;
     }
 
-    public void setValue(double v)
+    public void setValue(Double v)
     {
         this.v = v;
     }
 
     private Long ts;
-    private double v;
+    private Double v;
 }

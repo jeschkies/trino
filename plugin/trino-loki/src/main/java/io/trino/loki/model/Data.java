@@ -14,24 +14,30 @@
 package io.trino.loki.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Data
 {
+    public enum ResultType
+    {
+        @JsonProperty("streams") Streams,
+        @JsonProperty("matrix") Matrix;
+    }
 
-    public String getResultType()
+    public ResultType getResultType()
     {
         return resultType;
     }
 
-    public void setResultType(String resultType)
+    public void setResultType(ResultType resultType)
     {
         this.resultType = resultType;
     }
 
-    private String resultType;
+    private ResultType resultType;
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "resultType", include = JsonTypeInfo.As.EXTERNAL_PROPERTY)
     @JsonSubTypes(value = {

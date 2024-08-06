@@ -13,22 +13,22 @@
  */
 package io.trino.loki;
 
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpUriBuilder;
+import io.trino.loki.model.Data;
 import io.trino.loki.model.QueryResult;
 import io.trino.spi.TrinoException;
-import io.trino.spi.connector.ColumnMetadata;
-import io.trino.spi.type.DoubleType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeManager;
-import jakarta.annotation.Nullable;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -85,8 +85,7 @@ public class LokiClient
                 .build());
     }
 
-    // TODO: execute query
-    public QueryResult doQuery(String lokiQuery, Long start, Long end)
+    public QueryResult rangeQuery(String lokiQuery, Long start, Long end)
     {
         final URI uri =
                 HttpUriBuilder.uriBuilderFrom(lokiEndpoint)
@@ -104,7 +103,7 @@ public class LokiClient
             throw new TrinoException(LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
         }
         catch (IOException e) {
-            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Error reading metrics", e);
+            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Error reading range query", e);
         }
     }
 
@@ -121,5 +120,38 @@ public class LokiClient
     {
         Request.Builder requestBuilder = new Request.Builder().url(uri.toString());
         return httpClient.newCall(requestBuilder.build()).execute();
+    }
+
+    public Data.ResultType getExpectedResultType(String query)
+    {
+        // Execute instant query to determine whether the query is a log or metric expression.
+        final URI uri =
+                HttpUriBuilder.uriBuilderFrom(lokiEndpoint)
+                        .appendPath("/loki/api/v1/query")
+                        .addParameter("query", query)
+                        .build();
+
+        try (Response response = requestUri(uri)) {
+            if (response.isSuccessful() && response.body() != null) {
+                return deserializeResultType(response.body().byteStream());
+            }
+            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
+        }
+        catch (IOException e) {
+            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Error reading instant query", e);
+        }
+    }
+
+    private Data.ResultType deserializeResultType(InputStream input)
+            throws IOException
+    {
+        ObjectMapper mapper = new ObjectMapper();
+        var node = mapper.readTree(input);
+        if (Objects.equals(node.get("data").get("resultType").asText(), "streams")) {
+            return Data.ResultType.Streams;
+        }
+        else {
+            return Data.ResultType.Matrix;
+        }
     }
 }

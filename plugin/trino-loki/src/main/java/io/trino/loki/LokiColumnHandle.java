@@ -19,17 +19,17 @@ import io.trino.spi.type.Type;
 
 import static java.util.Objects.requireNonNull;
 
-public record LokiColumnHandle(String columnName, Type columnType, int ordinalPosition)
+public record LokiColumnHandle(String name, Type type, int ordinalPosition)
         implements ColumnHandle
 {
     public LokiColumnHandle
     {
-        requireNonNull(columnName, "columnName is null");
-        requireNonNull(columnType, "columnType is null");
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
     }
 
     public ColumnMetadata columnMetadata()
     {
-        return new ColumnMetadata(columnName, columnType);
+        return new ColumnMetadata(name, type);
     }
 }

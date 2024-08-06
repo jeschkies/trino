@@ -52,5 +52,6 @@ public class QueryResult
     private String status;
     private Data data;
 
-    static abstract class Result {}
+    public static sealed abstract class Result
+            permits Streams, Matrix {}
 }

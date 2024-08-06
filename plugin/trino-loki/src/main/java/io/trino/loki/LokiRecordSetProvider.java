@@ -31,7 +31,7 @@ public class LokiRecordSetProvider
     @Inject
     public LokiRecordSetProvider(LokiClient lokiClient)
     {
-        this.prometheusClient = requireNonNull(lokiClient, "prometheusClient is null");
+        this.prometheusClient = requireNonNull(lokiClient, "lokiClient is null");
     }
 
     @Override

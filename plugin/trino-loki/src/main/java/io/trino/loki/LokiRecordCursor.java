@@ -1,38 +1,28 @@
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package io.trino.loki;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
-import io.trino.loki.model.LogEntry;
-import io.trino.loki.model.QueryResult;
-import io.trino.loki.model.Streams;
 import io.trino.spi.TrinoException;
-import io.trino.spi.block.*;
+import io.trino.spi.block.ArrayBlockBuilder;
+import io.trino.spi.block.Block;
+import io.trino.spi.block.BlockBuilder;
+import io.trino.spi.block.MapBlockBuilder;
+import io.trino.spi.block.SqlMap;
 import io.trino.spi.connector.RecordCursor;
-import io.trino.spi.type.*;
+import io.trino.spi.type.ArrayType;
+import io.trino.spi.type.MapType;
+import io.trino.spi.type.Type;
+import io.trino.spi.type.TypeUtils;
+import io.trino.spi.type.VarcharType;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.block.MapValueBuilder.buildMapValue;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -45,32 +35,15 @@ import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static java.util.Objects.requireNonNull;
 
-public class LokiRecordCursor
+public abstract class LokiRecordCursor
         implements RecordCursor
 {
+    final List<LokiColumnHandle> columnHandles;
+    final int[] fieldToColumnIndex;
 
-    private final List<LokiColumnHandle> columnHandles;
-    private final int[] fieldToColumnIndex;
-
-    private final Iterator<LabelledEntry> entryItr;
-
-    static class LabelledEntry
+    public LokiRecordCursor(List<LokiColumnHandle> columnHandles)
     {
-        public LogEntry entry;
-        public Map<String, String> labels;
 
-        public LabelledEntry(LogEntry entry, Map<String, String> labels)
-        {
-            super();
-            this.entry = entry;
-            this.labels = labels;
-        }
-    }
-
-    private LabelledEntry entry;
-
-    public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result)
-    {
         this.columnHandles = columnHandles;
 
         fieldToColumnIndex = new int[columnHandles.size()];
@@ -78,13 +51,6 @@ public class LokiRecordCursor
             LokiColumnHandle columnHandle = columnHandles.get(i);
             fieldToColumnIndex[i] = columnHandle.ordinalPosition();
         }
-
-        var streamsResult = (Streams) result.getData().getResult();
-
-        this.entryItr = streamsResult.getStreams()
-                .stream()
-                .flatMap(stream -> stream.values().stream()
-                        .map(value -> new LabelledEntry(value, stream.labels()))).iterator();
     }
 
     @Override
@@ -103,31 +69,10 @@ public class LokiRecordCursor
     public Type getType(int field)
     {
         checkArgument(field < columnHandles.size(), "Invalid field index");
-        return columnHandles.get(field).columnType();
+        return columnHandles.get(field).type();
     }
 
-    @Override
-    public boolean advanceNextPosition()
-    {
-        if (!entryItr.hasNext()) {
-            return false;
-        }
-        entry = entryItr.next();
-        return true;
-    }
-
-    private Object getEntryValue(int field)
-    {
-        checkState(entry != null, "Cursor has not been advanced yet");
-
-        int columnIndex = fieldToColumnIndex[field];
-        return switch (columnIndex) {
-            case 0 -> getSqlMapFromMap(columnHandles.get(columnIndex).columnType(), entry.labels);
-            case 1 -> entry.entry.getTs();
-            case 2 -> entry.entry.getLine();
-            default -> null;
-        };
-    }
+    abstract Object getEntryValue(int field);
 
     // Copy from Loki to handle map<string,string>
     static SqlMap getSqlMapFromMap(Type type, Map<?, ?> map)

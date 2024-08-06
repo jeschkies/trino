@@ -14,7 +14,9 @@
 package io.trino.loki;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.loki.model.Matrix;
 import io.trino.loki.model.QueryResult;
+import io.trino.loki.model.Streams;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.type.Type;
@@ -42,7 +44,7 @@ public class LokiRecordSet
         this.columnHandles = requireNonNull(columnHandles, "columnHandles is null");
         ImmutableList.Builder<Type> types = ImmutableList.builder();
         for (LokiColumnHandle column : columnHandles) {
-            types.add(column.columnType());
+            types.add(column.type());
         }
         this.columnTypes = types.build();
 
@@ -58,7 +60,7 @@ public class LokiRecordSet
         final String query = split.query();
         // Actually execute the query
         // TODO: lazily parse
-        this.result = lokiClient.doQuery(query, start, end);
+        this.result = lokiClient.rangeQuery(query, start, end);
     }
 
     static long ONE_HOUR = Duration.ofHours(1).toNanos();
@@ -72,7 +74,10 @@ public class LokiRecordSet
     @Override
     public RecordCursor cursor()
     {
-        return new LokiRecordCursor(columnHandles, result);
+        return switch (result.getData().getResult()) {
+            case Streams s -> new LokiStreamsRecordCursor(columnHandles, s);
+            case Matrix m -> new LokiMatrixRecordCursor(columnHandles, m);
+        };
     }
 
     private Long now()
