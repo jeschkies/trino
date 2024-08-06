@@ -16,18 +16,14 @@ package io.trino.loki;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import io.airlift.log.Logger;
 import io.trino.spi.connector.*;
 import io.trino.spi.function.table.ConnectorTableFunctionHandle;
-import io.trino.spi.type.DoubleType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 
 import java.util.*;
-import java.util.function.UnaryOperator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.trino.spi.connector.RelationColumnsMetadata.forTable;
 import static io.trino.spi.type.TimestampWithTimeZoneType.createTimestampWithTimeZoneType;
 import static java.util.Objects.requireNonNull;
 
@@ -38,6 +34,11 @@ public class LokiMetadata
 
     // TODO: this might not be the right spot
     static final Type TIMESTAMP_COLUMN_TYPE = createTimestampWithTimeZoneType(3);
+
+    public Type getVarcharMapType()
+    {
+        return this.lokiClient.getVarcharMapType();
+    }
 
     @Inject
     public LokiMetadata(LokiClient lokiClient)
@@ -85,8 +86,9 @@ public class LokiMetadata
 
         LokiTableHandle tableHandle = queryHandle.getTableHandle();
         List<ColumnHandle> columnHandles = ImmutableList.of(
-                new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 0),
-                new LokiColumnHandle("value", VarcharType.VARCHAR, 1)
+                new LokiColumnHandle("labels", getVarcharMapType(), 0),
+                new LokiColumnHandle("timestamp", TIMESTAMP_COLUMN_TYPE, 1),
+                new LokiColumnHandle("value", VarcharType.VARCHAR, 2)
         );
         return Optional.of(new TableFunctionApplicationResult<>(tableHandle, columnHandles));
     }
@@ -97,7 +99,7 @@ public class LokiMetadata
         // TODO: base value column type on query. Maybe by querying Loki.
 
         var columns = ImmutableList.of(
-                //new ColumnMetadata("labels", varcharMapType),
+                new ColumnMetadata("labels", getVarcharMapType()),
                 new ColumnMetadata("timestamp", TIMESTAMP_COLUMN_TYPE),
                 new ColumnMetadata("value", VarcharType.VARCHAR)
         );
