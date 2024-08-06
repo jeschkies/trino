@@ -116,7 +116,7 @@ public class LokiRecordCursor implements RecordCursor {
         };
     }
 
-    // Copy from prometheus to handle map<string,string>
+    // Copy from Loki to handle map<string,string>
     static SqlMap getSqlMapFromMap(Type type, Map<?, ?> map)
     {
         // on functions like COUNT() the Type won't be a MapType
