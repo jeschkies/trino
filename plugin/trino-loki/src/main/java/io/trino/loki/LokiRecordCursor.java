@@ -13,18 +13,17 @@
  */
 package io.trino.loki;
 
+import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.trino.spi.TrinoException;
-import io.trino.spi.block.ArrayBlockBuilder;
-import io.trino.spi.block.BlockBuilder;
-import io.trino.spi.block.MapBlockBuilder;
-import io.trino.spi.block.SqlMap;
+import io.trino.spi.block.*;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.type.*;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -110,12 +109,105 @@ public class LokiRecordCursor implements RecordCursor {
 
         int columnIndex = fieldToColumnIndex[field];
         return switch (columnIndex) {
-            case 0 -> entry.labels.toString().substring(0,60);
+            case 0 -> getSqlMapFromMap(columnHandles.get(columnIndex).columnType(), entry.labels);
             case 1 -> entry.entry.getTs();
             case 2 -> entry.entry.getLine();
             default -> null;
         };
     }
+
+    // Copy from prometheus to handle map<string,string>
+    static SqlMap getSqlMapFromMap(Type type, Map<?, ?> map)
+    {
+        // on functions like COUNT() the Type won't be a MapType
+        if (!(type instanceof MapType mapType)) {
+            return null;
+        }
+        Type keyType = mapType.getKeyType();
+        Type valueType = mapType.getValueType();
+
+        return buildMapValue(mapType, map.size(), (keyBuilder, valueBuilder) -> {
+            map.forEach((key, value) -> {
+                writeObject(keyBuilder, keyType, key);
+                writeObject(valueBuilder, valueType, value);
+            });
+        });
+    }
+
+    static Map<Object, Object> getMapFromSqlMap(Type type, SqlMap sqlMap)
+    {
+        MapType mapType = (MapType) type;
+        Type keyType = mapType.getKeyType();
+        Type valueType = mapType.getValueType();
+
+        int rawOffset = sqlMap.getRawOffset();
+        Block rawKeyBlock = sqlMap.getRawKeyBlock();
+        Block rawValueBlock = sqlMap.getRawValueBlock();
+
+        Map<Object, Object> map = new HashMap<>(sqlMap.getSize());
+        for (int i = 0; i < sqlMap.getSize(); i++) {
+            map.put(readObject(keyType, rawKeyBlock, rawOffset + i), readObject(valueType, rawValueBlock, rawOffset + i));
+        }
+        return map;
+    }
+
+    private static void writeObject(BlockBuilder builder, Type type, Object obj)
+    {
+        if (type instanceof ArrayType arrayType) {
+            Type elementType = arrayType.getElementType();
+            ((ArrayBlockBuilder) builder).buildEntry(elementBuilder -> {
+                for (Object item : (List<?>) obj) {
+                    writeObject(elementBuilder, elementType, item);
+                }
+            });
+        }
+        else if (type instanceof MapType mapType) {
+            ((MapBlockBuilder) builder).buildEntry((keyBuilder, valueBuilder) -> {
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) obj).entrySet()) {
+                    writeObject(keyBuilder, mapType.getKeyType(), entry.getKey());
+                    writeObject(valueBuilder, mapType.getValueType(), entry.getValue());
+                }
+            });
+        }
+        else {
+            if (BOOLEAN.equals(type)
+                    || TINYINT.equals(type)
+                    || SMALLINT.equals(type)
+                    || INTEGER.equals(type)
+                    || BIGINT.equals(type)
+                    || DOUBLE.equals(type)
+                    || type instanceof VarcharType) {
+                TypeUtils.writeNativeValue(type, builder, obj);
+            }
+        }
+    }
+
+    private static Object readObject(Type type, Block block, int position)
+    {
+        if (type instanceof ArrayType arrayType) {
+            Type elementType = arrayType.getElementType();
+            return getArrayFromBlock(elementType, arrayType.getObject(block, position));
+        }
+        if (type instanceof MapType mapType) {
+            return getMapFromSqlMap(type, mapType.getObject(block, position));
+        }
+        if (type.getJavaType() == Slice.class) {
+            Slice slice = (Slice) requireNonNull(TypeUtils.readNativeValue(type, block, position));
+            return (type instanceof VarcharType) ? slice.toStringUtf8() : slice.getBytes();
+        }
+
+        return TypeUtils.readNativeValue(type, block, position);
+    }
+
+    private static List<Object> getArrayFromBlock(Type elementType, Block block)
+    {
+        ImmutableList.Builder<Object> arrayBuilder = ImmutableList.builder();
+        for (int i = 0; i < block.getPositionCount(); ++i) {
+            arrayBuilder.add(readObject(elementType, block, i));
+        }
+        return arrayBuilder.build();
+    }
+    // End of copy from prometheus
 
     @Override
     public boolean getBoolean(int field) {
