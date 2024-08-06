@@ -16,8 +16,6 @@ import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeUtils;
 import io.trino.spi.type.VarcharType;
 
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +25,6 @@ import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.block.MapValueBuilder.buildMapValue;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
-import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.spi.type.SmallintType.SMALLINT;
@@ -72,7 +69,7 @@ public abstract class LokiRecordCursor
         return columnHandles.get(field).type();
     }
 
-    abstract Object getEntryValue(int field);
+    abstract Object getFieldValue(int field);
 
     // Copy from Loki to handle map<string,string>
     static SqlMap getSqlMapFromMap(Type type, Map<?, ?> map)
@@ -178,39 +175,40 @@ public abstract class LokiRecordCursor
     {
         Type type = getType(field);
         if (type.equals(LokiMetadata.TIMESTAMP_COLUMN_TYPE)) {
-            Long nanos = (Long) requireNonNull(getEntryValue(field));
-            // render with the fixed offset of the Trino server
-            int offsetMinutes = Instant.ofEpochMilli(nanos / 1000).atZone(ZoneId.systemDefault()).getOffset().getTotalSeconds() / 60;
-            return packTimeWithTimeZone(nanos, offsetMinutes);
+            Long ts = (Long) requireNonNull(getFieldValue(field));
+            // Loki returns either second epoch or nanos depending on the query.
+            return toTimeWithTimeZone(ts);
         }
         throw new TrinoException(NOT_SUPPORTED, "Unsupported type " + getType(field));
     }
+
+    abstract long toTimeWithTimeZone(Long ts);
 
     @Override
     public double getDouble(int field)
     {
         checkFieldType(field, DOUBLE);
-        return (double) requireNonNull(getEntryValue(field));
+        return (double) requireNonNull(getFieldValue(field));
     }
 
     @Override
     public Slice getSlice(int field)
     {
         checkFieldType(field, createUnboundedVarcharType());
-        return Slices.utf8Slice((String) requireNonNull(getEntryValue(field)));
+        return Slices.utf8Slice((String) requireNonNull(getFieldValue(field)));
     }
 
     @Override
     public Object getObject(int field)
     {
-        return getEntryValue(field);
+        return getFieldValue(field);
     }
 
     @Override
     public boolean isNull(int field)
     {
         checkArgument(field < columnHandles.size(), "Invalid field index");
-        return getEntryValue(field) == null;
+        return getFieldValue(field) == null;
     }
 
     @Override

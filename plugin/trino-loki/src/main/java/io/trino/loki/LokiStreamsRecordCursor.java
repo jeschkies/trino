@@ -16,11 +16,17 @@ package io.trino.loki;
 import io.trino.loki.model.LogEntry;
 import io.trino.loki.model.Streams;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
+import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
+
 import static com.google.common.base.Preconditions.checkState;
+import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
 
 public class LokiStreamsRecordCursor
         extends LokiRecordCursor
@@ -53,7 +59,7 @@ public class LokiStreamsRecordCursor
     }
 
     @Override
-    Object getEntryValue(int field)
+    Object getFieldValue(int field)
     {
         checkState(current != null, "Cursor has not been advanced yet");
 
@@ -64,5 +70,15 @@ public class LokiStreamsRecordCursor
             case 2 -> current.entry.getLine();
             default -> null;
         };
+    }
+
+    @Override
+    long toTimeWithTimeZone(Long nanos)
+    {
+        Instant ts = Instant.ofEpochSecond(0, nanos);
+
+        // render with the fixed offset of the Trino server
+        int offsetMinutes = ts.atZone(ZoneId.systemDefault()).getOffset().getTotalSeconds() / 60;
+        return packDateTimeWithZone(ts.toEpochMilli(), offsetMinutes);
     }
 }

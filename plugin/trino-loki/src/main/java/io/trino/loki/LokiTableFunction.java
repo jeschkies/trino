@@ -29,6 +29,7 @@ import io.trino.spi.type.*;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,9 @@ import static io.trino.spi.function.table.ReturnTypeSpecification.GenericTable.G
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.spi.type.TimestampWithTimeZoneType.TIMESTAMP_TZ_NANOS;
+import static io.trino.spi.type.Timestamps.MILLISECONDS_PER_SECOND;
+import static io.trino.spi.type.Timestamps.NANOSECONDS_PER_MILLISECOND;
+import static io.trino.spi.type.Timestamps.PICOSECONDS_PER_NANOSECOND;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -87,6 +91,8 @@ public class LokiTableFunction
         if (Strings.isNullOrEmpty(query)) {
             throw new TrinoException(INVALID_FUNCTION_ARGUMENT, query);
         }
+        requireNonNull(start);
+        requireNonNull(end);
 
         // determine the returned row type
         List<ColumnHandle> columnHandles;
@@ -106,9 +112,8 @@ public class LokiTableFunction
 
         var tableHandle = new LokiTableHandle(
                 query,
-                // TODO: account for time zone
-                Instant.ofEpochMilli(start.getEpochMillis()),
-                Instant.ofEpochMilli(end.getEpochMillis())
+                toInstant(start),
+                toInstant(end)
         );
 
         return TableFunctionAnalysis.builder()
@@ -133,5 +138,20 @@ public class LokiTableFunction
         {
             return tableHandle;
         }
+    }
+
+    /**
+     * Convert LongTimestampWithTimeZone to Instant. See BigQuery code for an example
+     *
+     * @param ts
+     * @return
+     */
+    private Instant toInstant(LongTimestampWithTimeZone ts)
+    {
+        long epochMillis = ts.getEpochMillis();
+        long epochSeconds = Math.floorDiv(epochMillis, MILLISECONDS_PER_SECOND);
+        long adjustNanoSeconds = (long) Math.floorMod(epochMillis, MILLISECONDS_PER_SECOND) * NANOSECONDS_PER_MILLISECOND + ts.getPicosOfMilli() / PICOSECONDS_PER_NANOSECOND;
+        ZoneId zone = TimeZoneKey.getTimeZoneKey(ts.getTimeZoneKey()).getZoneId();
+        return Instant.ofEpochSecond(epochSeconds, adjustNanoSeconds);
     }
 }
