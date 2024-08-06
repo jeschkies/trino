@@ -47,13 +47,13 @@ public class LokiRecordCursor implements RecordCursor {
     private final List<LokiColumnHandle> columnHandles;
     private final int[] fieldToColumnIndex;
 
-    private final Iterator<XXEntry> entryItr;
+    private final Iterator<LabelledEntry> entryItr;
 
-    static class XXEntry {
+    static class LabelledEntry {
         public QueryResult.LogEntry entry;
         public Map<String, String> labels;
 
-        public XXEntry(QueryResult.LogEntry entry, Map<String,String> labels) {
+        public LabelledEntry(QueryResult.LogEntry entry, Map<String,String> labels) {
             super();
             this.entry = entry;
             this.labels = labels;
@@ -61,7 +61,7 @@ public class LokiRecordCursor implements RecordCursor {
 
     }
 
-    private XXEntry entry;
+    private LabelledEntry entry;
 
     public LokiRecordCursor(List<LokiColumnHandle> columnHandles, QueryResult result) {
         this.columnHandles = columnHandles;
@@ -75,7 +75,7 @@ public class LokiRecordCursor implements RecordCursor {
         this.entryItr = result.getData().getStreams()
                 .stream()
                 .flatMap(stream -> stream.getValues().stream()
-                .map(value -> new XXEntry(value, stream.getLabels()))).iterator();
+                .map(value -> new LabelledEntry(value, stream.getLabels()))).iterator();
     }
 
     @Override
