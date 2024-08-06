@@ -26,6 +26,7 @@ import io.trino.spi.type.LongTimestampWithTimeZone;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.spi.type.VarcharType;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +71,7 @@ public class LokiTableFunction
     public TableFunctionAnalysis analyze(ConnectorSession session, ConnectorTransactionHandle transaction, Map<String, Argument> arguments, ConnectorAccessControl accessControl)
     {
         io.airlift.slice.Slice selector = (io.airlift.slice.Slice) ((ScalarArgument) arguments.get("QUERY")).getValue();
-        String strSelector = new String(selector.byteArray());
+        String strSelector = new String(selector.byteArray(), StandardCharsets.UTF_8);
 
         var start = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("START")).getValue();
         var end = (LongTimestampWithTimeZone) ((ScalarArgument) arguments.get("END")).getValue();

@@ -39,8 +39,6 @@ public class LokiMetadata
     // TODO: this might not be the right spot
     static final Type TIMESTAMP_COLUMN_TYPE = createTimestampWithTimeZoneType(3);
 
-    private static final Logger log = Logger.get(LokiMetadata.class);
-
     @Inject
     public LokiMetadata(LokiClient lokiClient)
     {
