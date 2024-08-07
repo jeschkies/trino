@@ -32,13 +32,11 @@ import io.trino.spi.function.table.ScalarArgumentSpecification;
 import io.trino.spi.function.table.TableFunctionAnalysis;
 import io.trino.spi.type.LongTimestampWithTimeZone;
 import io.trino.spi.type.TimeZoneKey;
-import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 
 import java.lang.reflect.UndeclaredThrowableException;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;

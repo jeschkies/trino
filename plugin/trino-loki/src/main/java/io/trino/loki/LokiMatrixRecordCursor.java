@@ -24,7 +24,6 @@ import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
-import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
 
 public class LokiMatrixRecordCursor
         extends LokiRecordCursor

@@ -22,11 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
-import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
-
 import static com.google.common.base.Preconditions.checkState;
-import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
+import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
 
 public class LokiStreamsRecordCursor
         extends LokiRecordCursor
