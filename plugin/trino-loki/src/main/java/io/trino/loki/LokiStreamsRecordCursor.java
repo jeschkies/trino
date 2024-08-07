@@ -31,7 +31,6 @@ import static io.trino.spi.type.DateTimeEncoding.packTimeWithTimeZone;
 public class LokiStreamsRecordCursor
         extends LokiRecordCursor
 {
-
     private final Iterator<LabelledEntry> entryItr;
 
     record LabelledEntry(LogEntry entry, Map<String, String> labels) {}
