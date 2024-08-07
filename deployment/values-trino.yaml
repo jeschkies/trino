@@ -1,6 +1,6 @@
 image:
   useRepositoryAsSoleImageReference: true
-  repository: trino:453-amd64
+  repository: trino:452-SNAPSHOT-amd64 
 worker:
   additionalJVMConfig: [-XX:+UnlockDiagnosticVMOptions, -XX:G1NumCollectionsKeepPinned=10000000]
 coordinator:
