@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.math.IntMath;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorAccessControl;
@@ -35,7 +36,10 @@ import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,12 +48,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
 import static io.trino.spi.function.table.ReturnTypeSpecification.GenericTable.GENERIC_TABLE;
 import static io.trino.spi.type.TimestampWithTimeZoneType.TIMESTAMP_TZ_NANOS;
+import static io.trino.spi.type.Timestamps.PICOSECONDS_PER_NANOSECOND;
 import static java.util.Objects.requireNonNull;
 
 public class LokiTableFunction
         extends AbstractConnectorTableFunction
 {
-    private Type varcharMapType;
     private LokiMetadata metadata;
 
     public LokiTableFunction(LokiMetadata metadata)
@@ -75,7 +79,6 @@ public class LokiTableFunction
                 GENERIC_TABLE);
 
         this.metadata = metadata;
-        this.varcharMapType = metadata.getVarcharMapType();
     }
 
     @Override
@@ -90,6 +93,8 @@ public class LokiTableFunction
         if (Strings.isNullOrEmpty(query)) {
             throw new TrinoException(INVALID_FUNCTION_ARGUMENT, query);
         }
+        requireNonNull(start);
+        requireNonNull(end);
 
         // determine the returned row type
         List<ColumnHandle> columnHandles;
@@ -109,14 +114,22 @@ public class LokiTableFunction
 
         var tableHandle = new LokiTableHandle(
                 query,
-                // TODO: account for time zone
-                Instant.ofEpochMilli(start.getEpochMillis()),
-                Instant.ofEpochMilli(end.getEpochMillis()));
+                toInstant(start),
+                toInstant(end));
 
         return TableFunctionAnalysis.builder()
                 .returnedType(returnedType)
                 .handle(new QueryHandle(tableHandle))
                 .build();
+    }
+
+    /**
+     * Convert LongTimestampWithTimeZone to Instant. See BigQuery code for an example
+     */
+    private Instant toInstant(LongTimestampWithTimeZone ts)
+    {
+        return Instant.ofEpochMilli(ts.getEpochMillis())
+                .plus(IntMath.divide(ts.getPicosOfMilli(), PICOSECONDS_PER_NANOSECOND, RoundingMode.CEILING), ChronoUnit.NANOS);
     }
 
     public static class QueryHandle
