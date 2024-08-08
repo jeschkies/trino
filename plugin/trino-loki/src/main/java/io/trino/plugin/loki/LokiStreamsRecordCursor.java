@@ -11,10 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.loki;
+package io.trino.plugin.loki;
 
-import io.trino.loki.model.LogEntry;
-import io.trino.loki.model.Streams;
+import io.trino.plugin.loki.model.LogEntry;
+import io.trino.plugin.loki.model.Streams;
 
 import java.time.Instant;
 import java.time.ZoneId;

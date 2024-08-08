@@ -11,12 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.loki;
+package io.trino.plugin.loki;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.loki.model.Matrix;
-import io.trino.loki.model.QueryResult;
-import io.trino.loki.model.Streams;
+import io.trino.plugin.loki.model.Matrix;
+import io.trino.plugin.loki.model.QueryResult;
+import io.trino.plugin.loki.model.Streams;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.type.Type;

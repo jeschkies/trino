@@ -11,14 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.loki;
+package io.trino.plugin.loki;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpUriBuilder;
-import io.trino.loki.model.Data;
-import io.trino.loki.model.QueryResult;
+import io.trino.plugin.loki.model.Data;
+import io.trino.plugin.loki.model.QueryResult;
 import io.trino.spi.TrinoException;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeManager;
@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
-import static io.trino.loki.LokiErrorCode.LOKI_UNKNOWN_ERROR;
 import static io.trino.spi.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.trino.spi.type.TypeSignature.mapType;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -103,10 +102,10 @@ public class LokiClient
             if (response.isSuccessful() && response.body() != null) {
                 return QueryResult.fromJSON(response.body().byteStream());
             }
-            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
+            throw new TrinoException(LokiErrorCode.LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
         }
         catch (IOException e) {
-            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Error reading range query", e);
+            throw new TrinoException(LokiErrorCode.LOKI_UNKNOWN_ERROR, "Error reading range query", e);
         }
     }
 
@@ -138,10 +137,10 @@ public class LokiClient
             if (response.isSuccessful() && response.body() != null) {
                 return deserializeResultType(response.body().byteStream());
             }
-            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
+            throw new TrinoException(LokiErrorCode.LOKI_UNKNOWN_ERROR, "Bad response " + response.code() + " " + response.message());
         }
         catch (IOException e) {
-            throw new TrinoException(LOKI_UNKNOWN_ERROR, "Error reading instant query", e);
+            throw new TrinoException(LokiErrorCode.LOKI_UNKNOWN_ERROR, "Error reading instant query", e);
         }
     }
 
