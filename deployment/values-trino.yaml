@@ -1,0 +1,14 @@
+image:
+    useRepositoryAsSoleImageReference: true
+    repository: trino:452-SNAPSHOT-amd64
+worker:
+    additionalJVMConfig: [ -XX:+UnlockDiagnosticVMOptions, -XX:G1NumCollectionsKeepPinned=10000000 ]
+coordinator:
+    additionalJVMConfig: [ -XX:+UnlockDiagnosticVMOptions, -XX:G1NumCollectionsKeepPinned=10000000 ]
+additionalCatalogs:
+    lakehouse: |-
+        connector.name=iceberg
+        hive.metastore.uri=thrift://example.net:9083
+    loki: |-
+        connector.name=loki
+        loki.uri=http://loki.loki:3100/
