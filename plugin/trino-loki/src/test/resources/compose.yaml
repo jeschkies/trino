@@ -3,21 +3,21 @@ services:
     loki:
         image: grafana/loki:3.1.0
         logging: &logging
-          driver: loki-compose
-          options:
-            loki-url: "http://localhost:3100/loki/api/v1/push"
-            loki-retries: "1"
-            loki-tenant-id: "1"
+            driver: loki-compose
+            options:
+                loki-url: "http://localhost:3100/loki/api/v1/push"
+                loki-retries: "1"
+                loki-tenant-id: "1"
         ports:
             - 3100:3100
 
     log-gen:
         logging:
-          <<: *logging
+            <<: *logging
         image: mingrammer/flog
-        command: ["-f", "json", "-l", "-d", "2s"]
+        command: [ "-f", "json", "-l", "-d", "2s" ]
         depends_on:
-          - loki
+            - loki
 
     minio:
         logging:
@@ -44,8 +44,14 @@ services:
             - GF_PATHS_PROVISIONING=/etc/config/grafana/provisioning
             - GF_AUTH_ANONYMOUS_ENABLED=true
             - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        entrypoint:
+            - sh
+            - -euc
+            - |
+                grafana cli plugins install trino-datasource
+                exec /run.sh
         ports:
             - 3000:3000
         volumes:
             - ./config/datasource.yaml:/etc/config/grafana/provisioning/datasources/ds.yaml
-
+            - ./config/plugin.yaml:/etc/config/grafana/provisioning/plugins/trino.yaml
